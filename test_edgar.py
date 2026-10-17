@@ -10,15 +10,12 @@ print("=" * 50)
 print("TEST 1: CIK lookup via company_tickers_exchange")
 print("=" * 50)
 r = requests.get(
-    "https://data.sec.gov/files/company_tickers_exchange.json",
+    "https://www.sec.gov/files/company_tickers.json",
     headers=HEADERS, timeout=30
 )
 print("Status:", r.status_code)
 data = r.json()
-ticker_col = data["fields"].index("ticker")
-cik_col    = data["fields"].index("cik")
-name_col   = data["fields"].index("name")
-cik_map = {row[ticker_col]: (str(row[cik_col]), row[name_col]) for row in data["data"]}
+cik_map = {v["ticker"]: (str(v["cik_str"]), v["title"]) for v in data.values()}
 
 for ticker in ["AAPL", "MSFT", "TSLA"]:
     cik, name = cik_map[ticker]

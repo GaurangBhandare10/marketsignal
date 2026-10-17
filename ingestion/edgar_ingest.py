@@ -89,14 +89,12 @@ def get_cik(ticker: str) -> str:
     if _cik_map is None:
         # company_tickers_exchange.json is the current working endpoint
         resp = requests.get(
-            f"{EDGAR_BASE}/files/company_tickers_exchange.json", headers=HEADERS, timeout=30
+            "https://www.sec.gov/files/company_tickers.json", headers=HEADERS, timeout=30
         )
         resp.raise_for_status()
         data = resp.json()
-        # format: {"fields": [...], "data": [[cik, name, ticker, exchange], ...]}
-        ticker_col = data["fields"].index("ticker")
-        cik_col    = data["fields"].index("cik")
-        _cik_map = {row[ticker_col]: str(row[cik_col]) for row in data["data"]}
+        # format: {0: {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."}, ...}
+        _cik_map = {v["ticker"]: str(v["cik_str"]) for v in data.values()}
     cik = _cik_map.get(ticker.upper())
     if not cik:
         raise ValueError(f"CIK not found for ticker: {ticker}")
