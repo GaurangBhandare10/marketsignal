@@ -1,0 +1,33 @@
+name: 'marketsignal'
+version: '1.0.0'
+config-version: 2
+
+profile: 'marketsignal'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  marketsignal:
+    staging:
+      +schema: dbt
+      +materialized: view
+    dimensions:
+      +schema: dbt
+      +materialized: table
+    facts:
+      +schema: dbt
+      +materialized: incremental
+      +unique_key: surrogate_key
+    aggregates:
+      +schema: dbt
+      +materialized: table

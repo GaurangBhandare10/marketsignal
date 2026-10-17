@@ -1,0 +1,42 @@
+# Environment & secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# dbt
+dbt/marketsignal/target/
+dbt/marketsignal/dbt_packages/
+dbt/marketsignal/logs/
+
+# Airflow
+airflow/logs/
+airflow/plugins/
+
+# ChromaDB local store
+rag/chroma_store/
+
+# MinIO local data
+minio_data/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
