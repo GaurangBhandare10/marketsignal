@@ -87,12 +87,16 @@ _cik_map: dict[str, str] | None = None
 def get_cik(ticker: str) -> str:
     global _cik_map
     if _cik_map is None:
+        # company_tickers_exchange.json is the current working endpoint
         resp = requests.get(
-            f"{EDGAR_BASE}/files/company_tickers.json", headers=HEADERS, timeout=30
+            f"{EDGAR_BASE}/files/company_tickers_exchange.json", headers=HEADERS, timeout=30
         )
         resp.raise_for_status()
         data = resp.json()
-        _cik_map = {v["ticker"]: str(v["cik_str"]) for v in data.values()}
+        # format: {"fields": [...], "data": [[cik, name, ticker, exchange], ...]}
+        ticker_col = data["fields"].index("ticker")
+        cik_col    = data["fields"].index("cik")
+        _cik_map = {row[ticker_col]: str(row[cik_col]) for row in data["data"]}
     cik = _cik_map.get(ticker.upper())
     if not cik:
         raise ValueError(f"CIK not found for ticker: {ticker}")
