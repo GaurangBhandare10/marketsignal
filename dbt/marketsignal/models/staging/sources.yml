@@ -1,0 +1,42 @@
+version: 2
+
+sources:
+  - name: raw
+    database: marketsignal
+    schema: raw
+    tables:
+      - name: edgar_filings
+        description: "Raw 8-K filing metadata ingested from SEC EDGAR"
+        columns:
+          - name: ticker
+            description: "Stock ticker symbol"
+          - name: cik
+            description: "SEC Central Index Key"
+          - name: file_date
+            description: "Date the filing was submitted to SEC"
+          - name: form_type
+            description: "SEC form type (8-K, 10-K, etc.)"
+          - name: display_names
+            description: "Company display name from EDGAR"
+          - name: file_name
+            description: "EDGAR filing file name / accession path"
+          - name: period_of_report
+            description: "Period the report covers"
+          - name: ingested_at
+            description: "Timestamp when row was loaded into Snowflake"
+
+      - name: gdelt_gkg
+        description: "Raw GDELT Global Knowledge Graph news events"
+        columns:
+          - name: capture_time
+            description: "GDELT 15-minute capture window timestamp"
+          - name: source_url
+            description: "Article URL"
+          - name: themes
+            description: "Pipe-delimited GDELT theme codes"
+          - name: tone
+            description: "Composite tone score (positive = good sentiment)"
+          - name: organizations
+            description: "Pipe-delimited organization names mentioned"
+          - name: ingested_at
+            description: "Timestamp when row was loaded into Snowflake"

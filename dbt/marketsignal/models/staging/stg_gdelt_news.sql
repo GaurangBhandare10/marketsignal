@@ -1,6 +1,6 @@
 -- stg_gdelt_news.sql
--- Bronze → Silver staging for raw GDELT GKG CSV data in Snowflake
--- Source: marketsignal.raw.gdelt_gkg
+-- Bronze → Silver staging for GDELT Global Knowledge Graph news events
+-- Source: marketsignal.raw.gdelt_gkg (flat columns)
 
 {{
   config(
@@ -10,13 +10,13 @@
 }}
 
 SELECT
-    GKGRECORDID                                                 AS gkg_record_id,
-    TO_DATE(LEFT(DATE::STRING, 8), 'YYYYMMDD')                 AS event_date,
-    SourceCommonName                                            AS source_name,
-    DocumentIdentifier                                          AS article_url,
-    Organizations                                               AS raw_organizations,
-    Themes                                                      AS raw_themes,
-    Locations                                                   AS raw_locations,
-    CURRENT_TIMESTAMP()                                         AS _loaded_at
-FROM marketsignal.raw.gdelt_gkg
-WHERE DATE IS NOT NULL
+    capture_time,
+    DATE_TRUNC('day', capture_time)                            AS event_date,
+    TRIM(source_url)                                            AS article_url,
+    themes                                                      AS raw_themes,
+    tone,
+    organizations                                               AS raw_organizations,
+    ingested_at                                                 AS _loaded_at
+FROM {{ source('raw', 'gdelt_gkg') }}
+WHERE capture_time IS NOT NULL
+  AND source_url IS NOT NULL

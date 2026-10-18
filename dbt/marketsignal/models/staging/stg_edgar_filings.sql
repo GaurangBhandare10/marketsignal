@@ -1,6 +1,6 @@
 -- stg_edgar_filings.sql
--- Bronze → Silver staging for raw EDGAR filing JSON loaded into Snowflake
--- Source: marketsignal.raw.edgar_filings (VARIANT column)
+-- Bronze → Silver staging for EDGAR 8-K filing metadata
+-- Source: marketsignal.raw.edgar_filings (flat VARCHAR columns)
 
 {{
   config(
@@ -10,14 +10,15 @@
 }}
 
 SELECT
-    f.raw_data:ticker::STRING                                   AS ticker,
-    f.raw_data:cik::STRING                                      AS cik,
-    filing.value:form::STRING                                   AS filing_type,
-    filing.value:filingDate::DATE                               AS filing_date,
-    filing.value:accessionNumber::STRING                        AS accession_number,
-    filing.value:primaryDocument::STRING                        AS primary_document,
-    CURRENT_TIMESTAMP()                                         AS _loaded_at
-FROM marketsignal.raw.edgar_filings f,
-     LATERAL FLATTEN(input => f.raw_data:filings) AS filing
-WHERE filing.value:form::STRING = '8-K'
-  AND filing.value:filingDate::DATE IS NOT NULL
+    UPPER(TRIM(ticker))                                         AS ticker,
+    TRIM(cik)                                                   AS cik,
+    file_date                                                   AS filing_date,
+    UPPER(TRIM(form_type))                                      AS filing_type,
+    TRIM(display_names)                                         AS company_name,
+    TRIM(file_name)                                             AS accession_number,
+    period_of_report,
+    ingested_at                                                 AS _loaded_at
+FROM {{ source('raw', 'edgar_filings') }}
+WHERE form_type = '8-K'
+  AND file_date IS NOT NULL
+  AND ticker IS NOT NULL
