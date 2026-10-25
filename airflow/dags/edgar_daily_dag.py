@@ -58,9 +58,95 @@ def _ingest_edgar(**context):
 
 
 def _load_to_snowflake(**context):
-    """Copy staged JSON files from MinIO into Snowflake raw schema via Snowpipe / COPY INTO."""
-    # TODO (Week 2): implement Snowflake COPY INTO from internal stage
-    pass
+    """Read today's EDGAR JSON files from MinIO and INSERT into raw.edgar_filings."""
+    import json
+    import logging
+    import boto3
+    import snowflake.connector
+    from botocore.client import Config
+    from datetime import datetime, timezone
+
+    log = logging.getLogger(__name__)
+
+    # ── MinIO ──────────────────────────────────────────────────────────────────
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=Variable.get("MINIO_ENDPOINT"),
+        aws_access_key_id=Variable.get("MINIO_ACCESS_KEY"),
+        aws_secret_access_key=Variable.get("MINIO_SECRET_KEY"),
+        config=Config(signature_version="s3v4"),
+    )
+    bucket = Variable.get("MINIO_BUCKET", default_var="marketsignal-raw")
+    today = datetime.utcnow().strftime("%Y/%m/%d")
+    ingested_at = datetime.now(timezone.utc).isoformat()
+
+    # ── Collect rows from all tickers ──────────────────────────────────────────
+    rows: list[tuple] = []
+    for ticker in _get_tickers():
+        prefix = f"edgar/filings_8k/{ticker}/{today}/"
+        try:
+            resp = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+            for obj in resp.get("Contents", []):
+                body = s3.get_object(Bucket=bucket, Key=obj["Key"])["Body"].read()
+                data = json.loads(body)
+                for filing in data.get("filings", []):
+                    rows.append((
+                        str(filing.get("ticker", ticker)),
+                        str(filing.get("cik", "")),
+                        filing.get("file_date"),          # 'YYYY-MM-DD' str or None
+                        str(filing.get("form_type", "8-K")),
+                        str(filing.get("display_names", "")),
+                        str(filing.get("file_name", "")),
+                        filing.get("period_of_report"),   # 'YYYY-MM-DD' str or None
+                        ingested_at,
+                    ))
+        except Exception as exc:
+            log.warning("Skipping %s: %s", ticker, exc)
+
+    if not rows:
+        log.info("No filings to load for %s.", today)
+        return
+
+    # ── Snowflake ──────────────────────────────────────────────────────────────
+    conn = snowflake.connector.connect(
+        account=Variable.get("SNOWFLAKE_ACCOUNT"),
+        user=Variable.get("SNOWFLAKE_USER"),
+        password=Variable.get("SNOWFLAKE_PASSWORD"),
+        role=Variable.get("SNOWFLAKE_ROLE", default_var="MARKETSIGNAL_ROLE"),
+        database=Variable.get("SNOWFLAKE_DATABASE", default_var="MARKETSIGNAL"),
+        schema="RAW",
+        warehouse=Variable.get("SNOWFLAKE_WAREHOUSE"),
+    )
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS raw.edgar_filings (
+            ticker           VARCHAR(20),
+            cik              VARCHAR(20),
+            file_date        DATE,
+            form_type        VARCHAR(20),
+            display_names    VARCHAR(1000),
+            file_name        VARCHAR(200),
+            period_of_report DATE,
+            ingested_at      TIMESTAMP_TZ
+        )
+    """)
+
+    # Bronze layer = append-only; dbt incremental handles dedup via surrogate key
+    cur.executemany(
+        """
+        INSERT INTO raw.edgar_filings
+            (ticker, cik, file_date, form_type, display_names,
+             file_name, period_of_report, ingested_at)
+        VALUES (%s, %s, %s::DATE, %s, %s, %s, %s::DATE, %s::TIMESTAMP_TZ)
+        """,
+        rows,
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    log.info("Loaded %d rows into raw.edgar_filings", len(rows))
 
 
 with DAG(

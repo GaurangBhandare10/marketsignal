@@ -38,7 +38,7 @@ KEEP_COLUMNS = [
     "GKGRECORDID", "DATE", "SourceCollectionIdentifier",
     "SourceCommonName", "DocumentIdentifier",
     "Organizations", "Persons", "Locations",
-    "Themes",
+    "Themes", "Tone",
 ]
 
 # Themes that indicate financial/corporate news
@@ -89,9 +89,17 @@ def download_and_filter_gkg(url: str) -> pd.DataFrame:
         "GKGRECORDID": 0, "DATE": 1, "SourceCollectionIdentifier": 2,
         "SourceCommonName": 3, "DocumentIdentifier": 4,
         "Themes": 7, "Locations": 9, "Persons": 11, "Organizations": 13,
+        "Tone": 15,   # V2Tone: "avg,pos,neg,polarity,..." — we take avg only
     }
     df = df.rename(columns={v: k for k, v in col_positions.items()})
     df = df[[c for c in KEEP_COLUMNS if c in df.columns]]
+
+    # Parse Tone: first comma-separated value is the overall average tone (float)
+    if "Tone" in df.columns:
+        df["Tone"] = pd.to_numeric(
+            df["Tone"].astype(str).str.split(",").str[0],
+            errors="coerce",
+        )
 
     # Filter: keep rows that mention at least one finance theme
     if "Themes" in df.columns:
