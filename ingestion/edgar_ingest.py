@@ -67,20 +67,40 @@ def fetch_company_facts(cik: str) -> dict:
 
 @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=30))
 def fetch_8k_filings(ticker: str, days_back: int = 90) -> list[dict]:
-    """Search EFTS for recent 8-K filings for a ticker."""
-    date_from = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
-    url = (
-        f"{EFTS_BASE}/LATEST/search-index"
-        f"?q=%228-K%22&dateRange=custom&startdt={date_from}"
-        f"&entity={ticker}&forms=8-K"
-    )
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    time.sleep(0.15)
-    hits = resp.json().get("hits", {}).get("hits", [])
-    return [h["_source"] for h in hits]
+    """Search EFTS for recent 8-K filings using CIK (exact company match)."""
+    cik = get_cik(ticker)
+    all_filings = []
 
+    while True:
+        # Submissions API returns exact company filings by CIK — no false matches
+        sub_url = f"{EDGAR_BASE}/submissions/CIK{cik.zfill(10)}.json"
+        resp = requests.get(sub_url, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        time.sleep(0.15)
 
+        data = resp.json()
+        recent = data.get("filings", {}).get("recent", {})
+        forms = recent.get("form", [])
+        dates = recent.get("filingDate", [])
+        accessions = recent.get("accessionNumber", [])
+        descriptions = recent.get("primaryDocument", [])
+
+        cutoff = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        for form, date, acc, doc in zip(forms, dates, accessions, descriptions):
+            if form in ("8-K", "8-K/A") and date >= cutoff:
+                all_filings.append({
+                    "ticker": ticker,
+                    "cik": cik,
+                    "form_type": form,
+                    "file_date": date,
+                    "period_of_report": date,
+                    "display_names": data.get("name", ticker),
+                    "file_name": doc,
+                })
+        break  # submissions API returns all at once
+
+    log.info("%s — %d 8-K filings found (last %d days)", ticker, len(all_filings), days_back)
+    return all_filings
 # ── CIK lookup ─────────────────────────────────────────────────────────────────
 _cik_map: dict[str, str] | None = None
 
