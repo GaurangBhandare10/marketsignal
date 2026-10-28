@@ -38,6 +38,7 @@ minio_data/
 
 # Streamlit
 .streamlit/secrets.toml
+# (secrets.toml.example is intentionally committed as a setup reference)
 
 # OS
 .DS_Store

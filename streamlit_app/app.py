@@ -15,11 +15,19 @@ import pandas as pd
 import snowflake.connector
 from dotenv import load_dotenv
 
+# Load .env first (local dev), then overlay Streamlit Cloud secrets so the
+# same os.environ reads work in both environments without changing anything else.
+load_dotenv()
+try:
+    for _k, _v in st.secrets.items():
+        if isinstance(_v, str):
+            os.environ.setdefault(_k, _v)
+except Exception:
+    pass  # st.secrets is empty or unavailable locally
+
 # RAG pipeline lives one level up
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "rag"))
-from rag_pipeline import answer_question  # noqa: E402  
-
-load_dotenv()
+from rag_pipeline import answer_question  # noqa: E402
 
 st.set_page_config(
     page_title="MarketSignal",
