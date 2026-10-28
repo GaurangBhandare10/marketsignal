@@ -139,7 +139,6 @@ Detects news volume spikes in the **7 days before an 8-K filing** vs. a 30-day b
 ## Authors
 
 - Gaurang Bhandare ([@GaurangBhandare10](https://github.com/GaurangBhandare10))
-- Bhalerao
 
 ---
 
