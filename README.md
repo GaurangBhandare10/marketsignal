@@ -94,7 +94,7 @@ An 8-K is a material event disclosure — earnings surprises, mergers, executive
 | Orchestration | Apache Airflow 2.9 | Scheduling, retries, dependency graph |
 | Embeddings | sentence-transformers (`all-MiniLM-L6-v2`) | Free, local, no API key |
 | Vector DB | ChromaDB | Persistent local vector store |
-| LLM | Groq API — `llama-3.3-70b-versatile` | Free tier, fast inference |
+| LLM | Groq API — `openai/gpt-oss-120b` | Free tier, fast inference |
 | Front-end | Streamlit | Fast interactive dashboard |
 
 **All components except Snowflake run locally for free.**
