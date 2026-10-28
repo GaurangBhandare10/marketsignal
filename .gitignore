@@ -23,8 +23,15 @@ dbt/marketsignal/logs/
 airflow/logs/
 airflow/plugins/
 
-# ChromaDB local store
+# ChromaDB local store (generated, not source)
 rag/chroma_store/
+streamlit_app/rag/chroma_store/
+
+# dbt user config (personal, not shared)
+dbt/marketsignal/.user.yml
+
+# Word temp files (open-file locks)
+~$*.docx
 
 # MinIO local data
 minio_data/

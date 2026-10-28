@@ -21,6 +21,7 @@ default_args = {
 
 # dbt project is mounted at /opt/airflow/dbt in docker-compose
 DBT_DIR = "/opt/airflow/dbt/marketsignal"
+DBT_BIN = "/home/airflow/.local/bin/dbt"  # BashOperator PATH omits ~/.local/bin
 
 with DAG(
     dag_id="dbt_full_refresh",
@@ -34,7 +35,7 @@ with DAG(
 
     dbt_seed = BashOperator(
         task_id="dbt_seed",
-        bash_command=f"cd {DBT_DIR} && dbt seed --profiles-dir . --full-refresh",
+        bash_command=f"cd {DBT_DIR} && {DBT_BIN} seed --profiles-dir . --full-refresh",
         env={
             "SNOWFLAKE_ACCOUNT":   "{{ var.value.SNOWFLAKE_ACCOUNT }}",
             "SNOWFLAKE_USER":      "{{ var.value.SNOWFLAKE_USER }}",
@@ -47,7 +48,7 @@ with DAG(
 
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command=f"cd {DBT_DIR} && dbt run --profiles-dir . --full-refresh",
+        bash_command=f"cd {DBT_DIR} && {DBT_BIN} run --profiles-dir . --full-refresh",
         env={
             "SNOWFLAKE_ACCOUNT":   "{{ var.value.SNOWFLAKE_ACCOUNT }}",
             "SNOWFLAKE_USER":      "{{ var.value.SNOWFLAKE_USER }}",
@@ -60,7 +61,7 @@ with DAG(
 
     dbt_test = BashOperator(
         task_id="dbt_test",
-        bash_command=f"cd {DBT_DIR} && dbt test --profiles-dir .",
+        bash_command=f"cd {DBT_DIR} && {DBT_BIN} test --profiles-dir .",
         env={
             "SNOWFLAKE_ACCOUNT":   "{{ var.value.SNOWFLAKE_ACCOUNT }}",
             "SNOWFLAKE_USER":      "{{ var.value.SNOWFLAKE_USER }}",

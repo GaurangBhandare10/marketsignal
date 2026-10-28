@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 # RAG pipeline lives one level up
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "rag"))
-from rag_pipeline import answer_question  # noqa: E402
+from rag_pipeline import answer_question  # noqa: E402  
 
 load_dotenv()
 
@@ -37,7 +37,7 @@ def get_snowflake_conn():
         role=os.environ["SNOWFLAKE_ROLE"],
         warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
         database=os.environ["SNOWFLAKE_DATABASE"],
-        schema="dbt",
+        schema="dbt_dbt",
     )
 
 
@@ -53,8 +53,8 @@ def load_spike_data(ticker: str | None = None) -> pd.DataFrame:
             a.avg_daily_baseline,
             ROUND(a.spike_ratio, 2)   AS spike_ratio,
             a.is_spike
-        FROM marketsignal.dbt.agg_news_spike_pre_filing a
-        JOIN marketsignal.dbt.dim_company c ON a.company_id = c.company_id
+        FROM marketsignal.dbt_dbt.agg_news_spike_pre_filing a
+        JOIN marketsignal.dbt_dbt.dim_company c ON a.company_id = c.company_id
         {where}
         ORDER BY a.filing_date DESC
         LIMIT 200

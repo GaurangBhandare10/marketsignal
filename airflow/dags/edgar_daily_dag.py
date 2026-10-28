@@ -39,11 +39,14 @@ def _ingest_edgar(**context):
     from botocore.client import Config
     from edgar_ingest import ingest_ticker
 
-    os.environ.setdefault("EDGAR_USER_AGENT", Variable.get("EDGAR_USER_AGENT"))
-    os.environ.setdefault("MINIO_ENDPOINT",   Variable.get("MINIO_ENDPOINT"))
-    os.environ.setdefault("MINIO_ACCESS_KEY", Variable.get("MINIO_ACCESS_KEY"))
-    os.environ.setdefault("MINIO_SECRET_KEY", Variable.get("MINIO_SECRET_KEY"))
-    os.environ.setdefault("MINIO_BUCKET",     Variable.get("MINIO_BUCKET", default_var="marketsignal-raw"))
+    # Force-set from Airflow Variables — do NOT use setdefault here.
+    # env_file in docker-compose pre-populates these with localhost values,
+    # so setdefault would silently keep localhost:9000 instead of minio:9000.
+    os.environ["EDGAR_USER_AGENT"] = Variable.get("EDGAR_USER_AGENT")
+    os.environ["MINIO_ENDPOINT"]   = Variable.get("MINIO_ENDPOINT")
+    os.environ["MINIO_ACCESS_KEY"] = Variable.get("MINIO_ACCESS_KEY")
+    os.environ["MINIO_SECRET_KEY"] = Variable.get("MINIO_SECRET_KEY")
+    os.environ["MINIO_BUCKET"]     = Variable.get("MINIO_BUCKET", default_var="marketsignal-raw")
 
     s3 = boto3.client(
         "s3",
@@ -78,7 +81,7 @@ def _load_to_snowflake(**context):
     )
     bucket = Variable.get("MINIO_BUCKET", default_var="marketsignal-raw")
     today = datetime.utcnow().strftime("%Y/%m/%d")
-    ingested_at = datetime.now(timezone.utc).isoformat()
+    ingested_at = datetime.utcnow().isoformat()  # TIMESTAMP_NTZ — no tz suffix
 
     # ── Collect rows from all tickers ──────────────────────────────────────────
     rows: list[tuple] = []
@@ -138,7 +141,7 @@ def _load_to_snowflake(**context):
         INSERT INTO raw.edgar_filings
             (ticker, cik, file_date, form_type, display_names,
              file_name, period_of_report, ingested_at)
-        VALUES (%s, %s, %s::DATE, %s, %s, %s, %s::DATE, %s::TIMESTAMP_TZ)
+        VALUES (%s, %s, %s::DATE, %s, %s, %s, %s::DATE, %s::TIMESTAMP_NTZ)
         """,
         rows,
     )

@@ -25,7 +25,11 @@ news_exploded AS (
         n._loaded_at,
         TRIM(org.value)                                         AS org_mention
     FROM {{ ref('stg_gdelt_news') }} n,
-         LATERAL SPLIT_TO_TABLE(COALESCE(n.raw_organizations, ''), '|') AS org
+         LATERAL SPLIT_TO_TABLE(
+             CASE WHEN COALESCE(n.raw_organizations, '') IN ('', 'nan') THEN ''
+                  ELSE n.raw_organizations END,
+             ';'   -- GDELT V2Organizations field is semicolon-delimited
+         ) AS org
 
     {% if is_incremental() %}
     WHERE n._loaded_at > (SELECT MAX(_loaded_at) FROM {{ this }})
@@ -42,8 +46,11 @@ matched AS (
     FROM news_exploded ne
     JOIN companies c
       ON UPPER(ne.org_mention) LIKE '%' || UPPER(c.ticker) || '%'
-      OR UPPER(ne.org_mention) LIKE '%' || UPPER(c.company_name) || '%'
+      -- Strip punctuation before comparing: "Tesla, Inc." → "TESLA INC" matches "tesla inc"
+      OR REGEXP_REPLACE(UPPER(ne.org_mention),  '[^A-Z0-9 ]', '') LIKE '%' || REGEXP_REPLACE(UPPER(c.company_name), '[^A-Z0-9 ]', '') || '%'
+      OR REGEXP_REPLACE(UPPER(c.company_name), '[^A-Z0-9 ]', '') LIKE '%' || REGEXP_REPLACE(UPPER(ne.org_mention),  '[^A-Z0-9 ]', '') || '%'
     WHERE ne.org_mention != ''
+      AND LENGTH(ne.org_mention) >= 4   -- avoid short tokens like "Inc" matching everything
 ),
 
 -- Daily rollup per company

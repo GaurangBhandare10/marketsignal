@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 # ── Config ─────────────────────────────────────────────────────────────────────
 CHROMA_PATH   = os.environ.get("CHROMA_PERSIST_PATH", "./chroma_store")
 EMBED_MODEL   = "all-MiniLM-L6-v2"   # ~80MB, runs locally, MIT license
-GROQ_MODEL    = os.environ.get("GROQ_MODEL", "llama3-8b-8192")
+GROQ_MODEL    = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 CHUNK_SIZE    = 800   # characters
 CHUNK_OVERLAP = 100
 TOP_K         = 5

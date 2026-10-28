@@ -27,12 +27,13 @@ def _ingest_gdelt(**context):
     import os
     import boto3
     from botocore.client import Config
-    from gdelt_ingest import ingest_latest, fetch_latest_gkg_url
+    from gdelt_ingest import ingest_latest
 
-    os.environ.setdefault("MINIO_ENDPOINT",   Variable.get("MINIO_ENDPOINT"))
-    os.environ.setdefault("MINIO_ACCESS_KEY", Variable.get("MINIO_ACCESS_KEY"))
-    os.environ.setdefault("MINIO_SECRET_KEY", Variable.get("MINIO_SECRET_KEY"))
-    os.environ.setdefault("MINIO_BUCKET",     Variable.get("MINIO_BUCKET", default_var="marketsignal-raw"))
+    # Force-set from Airflow Variables — env_file pre-populates with localhost values
+    os.environ["MINIO_ENDPOINT"]   = Variable.get("MINIO_ENDPOINT")
+    os.environ["MINIO_ACCESS_KEY"] = Variable.get("MINIO_ACCESS_KEY")
+    os.environ["MINIO_SECRET_KEY"] = Variable.get("MINIO_SECRET_KEY")
+    os.environ["MINIO_BUCKET"]     = Variable.get("MINIO_BUCKET", default_var="marketsignal-raw")
 
     s3 = boto3.client(
         "s3",
@@ -41,12 +42,8 @@ def _ingest_gdelt(**context):
         aws_secret_access_key=os.environ["MINIO_SECRET_KEY"],
         config=Config(signature_version="s3v4"),
     )
-    ingest_latest(s3)
-
-    # Push the MinIO key so the load task knows exactly which file to read
-    url = fetch_latest_gkg_url()
-    timestamp = url.split("/")[-1].split(".")[0]
-    minio_key = f"gdelt/gkg/{timestamp[:8]}/{timestamp}.csv"
+    minio_key = ingest_latest(s3)   # None if GDELT file not yet available (404)
+    # Push key so load task knows which file to read; None = nothing to load
     context["ti"].xcom_push(key="minio_key", value=minio_key)
 
 
@@ -58,7 +55,7 @@ def _load_gdelt_to_snowflake(**context):
     import pandas as pd
     import snowflake.connector
     from botocore.client import Config
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     log = logging.getLogger(__name__)
 
@@ -84,7 +81,7 @@ def _load_gdelt_to_snowflake(**context):
         log.info("Empty GDELT file — nothing to load.")
         return
 
-    ingested_at = datetime.now(timezone.utc).isoformat()
+    ingested_at = datetime.utcnow().isoformat()  # TIMESTAMP_NTZ — no tz suffix
 
     # Map CSV columns → raw.gdelt_gkg columns
     # DATE is YYYYMMDDHHMMSS integer; parse to timestamp
@@ -132,10 +129,10 @@ def _load_gdelt_to_snowflake(**context):
         CREATE TABLE IF NOT EXISTS raw.gdelt_gkg (
             capture_time  TIMESTAMP_NTZ,
             source_url    VARCHAR(2000),
-            themes        VARCHAR(10000),
+            themes        VARCHAR(16777216),
             tone          FLOAT,
-            organizations VARCHAR(10000),
-            ingested_at   TIMESTAMP_TZ
+            organizations VARCHAR(16777216),
+            ingested_at   TIMESTAMP_NTZ
         )
     """)
 
@@ -143,7 +140,7 @@ def _load_gdelt_to_snowflake(**context):
         """
         INSERT INTO raw.gdelt_gkg
             (capture_time, source_url, themes, tone, organizations, ingested_at)
-        VALUES (%s::TIMESTAMP_NTZ, %s, %s, %s, %s, %s::TIMESTAMP_TZ)
+        VALUES (%s::TIMESTAMP_NTZ, %s, %s, %s, %s, %s::TIMESTAMP_NTZ)
         """,
         rows,
     )

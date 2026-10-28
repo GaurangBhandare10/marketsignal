@@ -8,13 +8,15 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CORE__FERNET_KEY: ""
+    AIRFLOW__CORE__FERNET_KEY: "jL_sqaxF7BEi9Lh53JCG8nsJFHV1XDKqtXCv_hspdSw="
     AIRFLOW__WEBSERVER__SECRET_KEY: "marketsignal-dev-secret"
+    _PIP_ADDITIONAL_REQUIREMENTS: "dbt-snowflake==1.8.4" # installed at container start
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ../ingestion:/opt/airflow/ingestion # ingestion scripts available to tasks
+    - ../dbt:/opt/airflow/dbt # dbt project available to dbt tasks
   depends_on:
     postgres:
       condition: service_healthy
