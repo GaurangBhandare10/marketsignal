@@ -23,8 +23,8 @@ dbt/marketsignal/logs/
 airflow/logs/
 airflow/plugins/
 
-# ChromaDB local store (generated, not source)
-rag/chroma_store/
+# ChromaDB local store — committed so Streamlit Cloud has pre-indexed data
+# streamlit_app/rag/chroma_store/ is still excluded (old path, no longer used)
 streamlit_app/rag/chroma_store/
 
 # dbt user config (personal, not shared)

@@ -25,7 +25,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-CHROMA_PATH   = os.environ.get("CHROMA_PERSIST_PATH", "./chroma_store")
+_here = os.path.dirname(os.path.abspath(__file__))  # always points to rag/
+CHROMA_PATH   = os.environ.get("CHROMA_PERSIST_PATH", os.path.join(_here, "chroma_store"))
 EMBED_MODEL   = "all-MiniLM-L6-v2"   # ~80MB, runs locally, MIT license
 GROQ_MODEL    = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 CHUNK_SIZE    = 800   # characters
