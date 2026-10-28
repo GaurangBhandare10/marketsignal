@@ -152,6 +152,32 @@ def _load_to_snowflake(**context):
     log.info("Loaded %d rows into raw.edgar_filings", len(rows))
 
 
+def _index_chroma(**context):
+    """Index any new 8-K filings into ChromaDB so the RAG chatbot stays up to date."""
+    import os
+    import sys
+    import logging
+    log = logging.getLogger(__name__)
+
+    # Snowflake creds — same pattern as _load_to_snowflake
+    os.environ["SNOWFLAKE_ACCOUNT"]   = Variable.get("SNOWFLAKE_ACCOUNT")
+    os.environ["SNOWFLAKE_USER"]      = Variable.get("SNOWFLAKE_USER")
+    os.environ["SNOWFLAKE_PASSWORD"]  = Variable.get("SNOWFLAKE_PASSWORD")
+    os.environ["SNOWFLAKE_ROLE"]      = Variable.get("SNOWFLAKE_ROLE",      default_var="MARKETSIGNAL_ROLE")
+    os.environ["SNOWFLAKE_DATABASE"]  = Variable.get("SNOWFLAKE_DATABASE",  default_var="MARKETSIGNAL")
+    os.environ["SNOWFLAKE_WAREHOUSE"] = Variable.get("SNOWFLAKE_WAREHOUSE")
+    os.environ["EDGAR_USER_AGENT"]    = Variable.get("EDGAR_USER_AGENT")
+    # ChromaDB writes to the mounted rag/ volume so the Streamlit app can read it
+    os.environ["CHROMA_PERSIST_PATH"] = "/opt/airflow/rag/chroma_store"
+
+    sys.path.insert(0, "/opt/airflow/rag")
+    from index_edgar_filings import main as index_main
+
+    tickers = _get_tickers()
+    log.info("Indexing ChromaDB for %s", tickers)
+    index_main(tickers=tickers)
+
+
 with DAG(
     dag_id="edgar_daily",
     schedule_interval="0 6 * * *",
@@ -172,4 +198,9 @@ with DAG(
         python_callable=_load_to_snowflake,
     )
 
-    ingest >> load_snowflake
+    index_chroma = PythonOperator(
+        task_id="index_chroma",
+        python_callable=_index_chroma,
+    )
+
+    ingest >> load_snowflake >> index_chroma

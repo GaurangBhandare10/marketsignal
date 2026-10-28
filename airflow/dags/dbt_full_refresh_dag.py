@@ -25,7 +25,7 @@ DBT_BIN = "/home/airflow/.local/bin/dbt"  # BashOperator PATH omits ~/.local/bin
 
 with DAG(
     dag_id="dbt_full_refresh",
-    schedule_interval="0 2 * * 0",   # every Sunday 02:00 UTC
+    schedule_interval="0 2 * * *",   # daily 02:00 UTC
     start_date=datetime(2026, 10, 1),
     catchup=False,
     default_args=default_args,

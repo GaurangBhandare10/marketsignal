@@ -2,7 +2,9 @@
 # Run: docker-compose up -d
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.1-python3.11
+  build:
+    context: .
+    dockerfile: Dockerfile
   env_file: ../.env
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -10,13 +12,14 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__FERNET_KEY: "jL_sqaxF7BEi9Lh53JCG8nsJFHV1XDKqtXCv_hspdSw="
     AIRFLOW__WEBSERVER__SECRET_KEY: "marketsignal-dev-secret"
-    _PIP_ADDITIONAL_REQUIREMENTS: "dbt-snowflake==1.8.4" # installed at container start
+    CHROMA_PERSIST_PATH: /opt/airflow/rag/chroma_store
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ../ingestion:/opt/airflow/ingestion # ingestion scripts available to tasks
     - ../dbt:/opt/airflow/dbt # dbt project available to dbt tasks
+    - ../rag:/opt/airflow/rag # RAG scripts + ChromaDB persistent store
   depends_on:
     postgres:
       condition: service_healthy

@@ -66,7 +66,7 @@ def load_spike_data(ticker: str | None = None) -> pd.DataFrame:
 st.sidebar.title("MarketSignal 📈")
 st.sidebar.caption("Financial News Intelligence")
 
-tickers = ["All"] + ["AAPL", "MSFT", "TSLA", "NVDA", "META", "GOOGL", "AMZN"]
+tickers = ["All"] + ["AAPL", "MSFT", "TSLA", "NVDA", "META"]
 selected_ticker = st.sidebar.selectbox("Ticker", tickers)
 ticker_filter = None if selected_ticker == "All" else selected_ticker
 

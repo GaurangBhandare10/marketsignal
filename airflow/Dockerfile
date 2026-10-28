@@ -1,0 +1,5 @@
+FROM apache/airflow:2.9.1-python3.11
+RUN pip install --no-cache-dir \
+    dbt-snowflake==1.8.4 \
+    chromadb \
+    sentence-transformers
